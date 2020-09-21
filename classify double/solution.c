@@ -1,8 +1,16 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 
+#define SIGN_BIT_IDX 63
+
+#define EXP_START_BIT_IDX 52
+#define EXP_END_BIT_IDX 62
+#define FRAC_START_BIT_IDX 0
+#define FRAC_END_BIT_IDX 51
+
+#define FULL_EXP  0x00000000000007FF // Exponent of 11 1-s
+#define FULL_FRAC 0x000FFFFFFFFFFFFF // Fraction of 52 1-s
 
 
 /**
@@ -15,7 +23,76 @@ uint64_t convertToUint64 (double number) {
 }
 
 bool getBit (const uint64_t number, const uint8_t index) {
-    /// Your code here...
+    uint64_t mask = 1 << index;
+    return mask & number;
+}
+
+/**
+ *
+ * @param start is starting index of the mask (inclusive)
+ * @param end is ending index of the mask (inclusive)
+ * @return mask that starts at 'start' and ends at 'end'
+ */
+uint64_t getMask(const uint8_t start, const uint8_t end) {
+    uint64_t mask = 0;
+    for(uint64_t i = start; i <= end; ++ i) {
+        mask |= 1 << i;
+    }
+    mask <<= start;
+    return mask;
+}
+
+/**
+ *
+ * @param number
+ * @param start
+ * @param end
+ * @return all bits from 'number' between 'start' and 'end' (inclusive)
+ */
+uint64_t getBits(const uint64_t number, const uint64_t start, const uint64_t end) {
+    return number & getMask(start, end);
+}
+
+uint64_t getExponent(const uint64_t number) {
+    return getBits(number, EXP_START_BIT_IDX, EXP_END_BIT_IDX);
+}
+
+uint64_t getFraction(const uint64_t number) {
+    return getBits(number, FRAC_START_BIT_IDX, FRAC_END_BIT_IDX);
+}
+
+bool checkNegative(const uint64_t number) {
+    return getBit(number, SIGN_BIT_IDX);
+}
+
+// denormalized exponent is always 0
+bool checkExponentDenormalized(const uint64_t number) {
+    return getExponent(number) == 0;
+}
+
+//normalized exponent is bigger than 0, but smaller than all 1s
+bool checkExponentNormalized(const uint64_t number) {
+    uint64_t exp = getExponent(number);
+    return exp > 0 && exp < FULL_EXP;
+}
+
+// NaN exp is full 1s
+bool checkExponentNan(const uint64_t number) {
+    return getExponent(number) == FULL_EXP;
+}
+
+// denormalized fraction can't be 0, since it would make double a zero
+bool checkFractionDenormalized(const uint64_t number) {
+    return getFraction(number) >= 1;
+}
+
+bool checkFractionSNaN(const uint64_t number) {
+    uint64_t fraction = getFraction(number);
+    return fraction > 0 && fraction < FULL_FRAC;
+}
+
+bool checkFractionQNaN(const uint64_t number) {
+    return getBit(number, FRAC_END_BIT_IDX);
 }
 
 
@@ -24,7 +101,7 @@ bool getBit (const uint64_t number, const uint8_t index) {
  */
 
 bool checkForPlusZero (uint64_t number) {
-    /// Your code here.
+    return number == 0x0000000000000000;
 }
 
 bool checkForMinusZero (uint64_t number) {
@@ -32,35 +109,35 @@ bool checkForMinusZero (uint64_t number) {
 }
 
 bool checkForPlusInf (uint64_t number) {
-    /// Your code here.
+    return number == 0x7FF0000000000000;
 }
 
 bool checkForMinusInf (uint64_t number) {
-    /// Your code here.
+    return number == 0xFFF0000000000000;
 }
 
 bool checkForPlusNormal (uint64_t number) {
-    /// Your code here.
+    return !checkNegative(number) && checkExponentNormalized(number);
 }
 
 bool checkForMinusNormal (uint64_t number) {
-    /// Your code here.
+    return checkNegative(number) && checkExponentNormalized(number);
 }
 
 bool checkForPlusDenormal (uint64_t number) {
-    /// Your code here.
+    return !checkNegative(number) && checkExponentDenormalized(number) && checkFractionDenormalized(number);
 }
 
 bool checkForMinusDenormal (uint64_t number) {
-    /// Your code here.
+    return !checkNegative(number) && checkExponentDenormalized(number) && checkFractionDenormalized(number);
 }
 
 bool checkForSignalingNan (uint64_t number) {
-    /// Your code here.
+    return checkExponentNan(number) && checkFractionSNaN(number);
 }
 
 bool checkForQuietNan (uint64_t number) {
-    /// Your code here.
+    return checkExponentNan(number) && checkFractionQNaN(number);
 }
 
 
@@ -108,4 +185,13 @@ void classify (double number) {
     else {
         printf("Error.\n");
     }
+}
+
+int main() {
+//    double x;
+//    scanf("%lf", &x);
+//    classify(x);
+    double x;
+    scanf("%lf", &x);
+    classify(x);
 }
