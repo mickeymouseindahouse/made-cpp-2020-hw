@@ -6,11 +6,17 @@
 
 #define EXP_START_BIT_IDX 52
 #define EXP_END_BIT_IDX 62
+
 #define FRAC_START_BIT_IDX 0
 #define FRAC_END_BIT_IDX 51
 
 #define FULL_EXP  0x00000000000007FF // Exponent of 11 1-s
 #define FULL_FRAC 0x000FFFFFFFFFFFFF // Fraction of 52 1-s
+
+#define PLUS_ZERO  0x0000000000000000
+#define MINUS_ZERO 0x8000000000000000
+#define PLUS_INF   0x7FF0000000000000
+#define MINUS_INF  0xFFF0000000000000
 
 
 /**
@@ -101,19 +107,19 @@ bool checkFractionQNaN(const uint64_t number) {
  */
 
 bool checkForPlusZero (uint64_t number) {
-    return number == 0x0000000000000000;
+    return number == PLUS_ZERO;
 }
 
 bool checkForMinusZero (uint64_t number) {
-    return number == 0x8000000000000000;
+    return number == MINUS_ZERO;
 }
 
 bool checkForPlusInf (uint64_t number) {
-    return number == 0x7FF0000000000000;
+    return number == PLUS_INF;
 }
 
 bool checkForMinusInf (uint64_t number) {
-    return number == 0xFFF0000000000000;
+    return number == MINUS_INF;
 }
 
 bool checkForPlusNormal (uint64_t number) {
