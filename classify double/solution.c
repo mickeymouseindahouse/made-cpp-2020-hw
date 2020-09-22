@@ -23,7 +23,7 @@ uint64_t convertToUint64 (double number) {
 }
 
 bool getBit (const uint64_t number, const uint8_t index) {
-    uint64_t mask = 1 << index;
+    uint64_t mask = 1ull << index;
     return mask & number;
 }
 
@@ -34,11 +34,10 @@ bool getBit (const uint64_t number, const uint8_t index) {
  * @return mask that starts at 'start' and ends at 'end'
  */
 uint64_t getMask(const uint8_t start, const uint8_t end) {
-    uint64_t mask = 0;
-    for(uint64_t i = start; i <= end; ++ i) {
-        mask |= 1 << i;
+    uint64_t mask = 0ull;
+    for(uint8_t i = start; i <= end; ++ i) {
+        mask |= 1ull << i;
     }
-    mask <<= start;
     return mask;
 }
 
@@ -50,7 +49,7 @@ uint64_t getMask(const uint8_t start, const uint8_t end) {
  * @return all bits from 'number' between 'start' and 'end' (inclusive)
  */
 uint64_t getBits(const uint64_t number, const uint64_t start, const uint64_t end) {
-    return number & getMask(start, end);
+    return (number & getMask(start, end)) >> start;
 }
 
 uint64_t getExponent(const uint64_t number) {
@@ -67,13 +66,13 @@ bool checkNegative(const uint64_t number) {
 
 // denormalized exponent is always 0
 bool checkExponentDenormalized(const uint64_t number) {
-    return getExponent(number) == 0;
+    return getExponent(number) == 0ull;
 }
 
 //normalized exponent is bigger than 0, but smaller than all 1s
 bool checkExponentNormalized(const uint64_t number) {
     uint64_t exp = getExponent(number);
-    return exp > 0 && exp < FULL_EXP;
+    return exp > 0ull && exp < FULL_EXP;
 }
 
 // NaN exp is full 1s
@@ -83,14 +82,15 @@ bool checkExponentNan(const uint64_t number) {
 
 // denormalized fraction can't be 0, since it would make double a zero
 bool checkFractionDenormalized(const uint64_t number) {
-    return getFraction(number) >= 1;
+    return getFraction(number) > 0ull;
 }
 
 bool checkFractionSNaN(const uint64_t number) {
     uint64_t fraction = getFraction(number);
-    return fraction > 0 && fraction < FULL_FRAC;
+    return fraction > 0ull && fraction < FULL_FRAC;
 }
 
+//first bit of QNaN fraction should be 1, others are arbitrary
 bool checkFractionQNaN(const uint64_t number) {
     return getBit(number, FRAC_END_BIT_IDX);
 }
@@ -129,7 +129,7 @@ bool checkForPlusDenormal (uint64_t number) {
 }
 
 bool checkForMinusDenormal (uint64_t number) {
-    return !checkNegative(number) && checkExponentDenormalized(number) && checkFractionDenormalized(number);
+    return checkNegative(number) && checkExponentDenormalized(number) && checkFractionDenormalized(number);
 }
 
 bool checkForSignalingNan (uint64_t number) {
@@ -139,7 +139,6 @@ bool checkForSignalingNan (uint64_t number) {
 bool checkForQuietNan (uint64_t number) {
     return checkExponentNan(number) && checkFractionQNaN(number);
 }
-
 
 void classify (double number) {
     if (checkForPlusZero(convertToUint64(number))) {
@@ -185,13 +184,4 @@ void classify (double number) {
     else {
         printf("Error.\n");
     }
-}
-
-int main() {
-//    double x;
-//    scanf("%lf", &x);
-//    classify(x);
-    double x;
-    scanf("%lf", &x);
-    classify(x);
 }
