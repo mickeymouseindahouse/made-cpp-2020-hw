@@ -13,6 +13,17 @@
 
 namespace task {
 
+    template < typename T >
+    auto getZero = [] () -> T {
+        if(std::is_same<T, int>::value) {
+            return 0;
+        } else if(std::is_same<T, double>::value) {
+            return 0.0;
+        } else {
+            throw std::runtime_error("Only double or int allowed!");
+        }
+    };
+
     template< typename T>
     std::vector<T> operator + (const std::vector<T>& v) {
         return v;
@@ -49,11 +60,11 @@ namespace task {
     }
 
     template< typename T >
-    double operator * (const std::vector<T>& lhs, const std::vector<T>& rhs) {
+    T operator * (const std::vector<T>& lhs, const std::vector<T>& rhs) {
         if(lhs.size() != rhs.size()) {
             throw std::runtime_error("Vectors should be of same size!");
         }
-        return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0.0);
+        return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), getZero<T>());
     }
 
     template< typename T >
@@ -79,7 +90,7 @@ namespace task {
         for(size_t i = 0; i + 1 < lhs.size(); ++i) {
             // if lhs || rhs and lhs[i] == 0 then rhs[i] == 0
             if((lhs[i] == 0.0 || rhs[i] == 0.0) && (lhs[i] + rhs[i] != 0.0)
-                || fabs(lhs[i] / rhs[i] - lhs[i + 1] /rhs[i + 1]) > EPSILON) {
+                || fabs(static_cast<double>(lhs[i]) / rhs[i] - static_cast<double>(lhs[i + 1]) /rhs[i + 1]) > EPSILON) {
                 return false;
             }
         }
@@ -91,7 +102,7 @@ namespace task {
         if( lhs || rhs) {
             for(size_t i = 0; i < lhs.size(); ++i) {
                 if(rhs[i] != 0.0) {
-                    return lhs[i] / rhs[i] > 0.0;
+                    return static_cast<double>(lhs[i]) / rhs[i] > 0.0;
                 }
             }
             // zero vector is same directed with any vector
