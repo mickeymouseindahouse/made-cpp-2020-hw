@@ -11,10 +11,9 @@ Op compose (size_t n, Op ops[]) {
     } else if(n == 1) {
         return ops[0];
     } else {
-        --n;
-        Op currFunc = ops[n];
-        return [currFunc, ops, n](int x) -> int {
-            return compose(n, ops)(currFunc(x));
+        return [ops, n](int x) -> int {
+            Op currFunc = ops[n - 1];
+            return compose(n - 1, ops)(currFunc(x));
         };
     }
 }
