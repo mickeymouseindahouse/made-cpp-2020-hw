@@ -15,6 +15,11 @@ class SizeMismatchException : public std::exception {};
 
 class Matrix {
 
+private:
+    double** matrix_;
+    size_t col_num_;
+    size_t row_num_;
+
 public:
 
     Matrix();
@@ -27,8 +32,8 @@ public:
     void set(size_t row, size_t col, const double& value);
     void resize(size_t new_rows, size_t new_cols);
 
-    /* ??? */ operator[](size_t row);
-    /* ??? */ operator[](size_t row) const;
+    double*& operator[](size_t row);
+    const double*& operator[](size_t row) const;
 
     Matrix& operator+=(const Matrix& a);
     Matrix& operator-=(const Matrix& a);
