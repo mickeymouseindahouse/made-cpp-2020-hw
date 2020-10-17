@@ -1,14 +1,14 @@
+#include <cmath>
 #include "matrix.h"
 
 using namespace task;
 
 
-// Your code goes here...
 Matrix::Matrix() {
     col_num_ = 1;
     row_num_ = 1;
     matrix_ = new double*[1];
-    matrix_[0] = new double[1]{0};
+    matrix_[0] = new double[1]{1.0};
 }
 
 Matrix::Matrix(size_t rows, size_t cols) {
@@ -17,25 +17,39 @@ Matrix::Matrix(size_t rows, size_t cols) {
 
     matrix_ = new double*[rows];
     for(size_t i = 0; i < rows; ++i) {
-        matrix_[i] = new double[col_num_]{0};
+        matrix_[i] = new double[col_num_]{0.0};
+    }
+
+    for(size_t i = 0; i < std::min(rows, cols); ++i) {
+        matrix_[i][i] = 1.0;
     }
 }
 
-Matrix::Matrix(const Matrix& copy) : col_num_(copy.col_num_), row_num_(copy.row_num_), matrix_(copy.matrix_) {};
+Matrix::Matrix(const Matrix& copy) {
+    this->row_num_ = copy.row_num_;
+    this->col_num_ = copy.col_num_;
+    this->matrix_= new double*[row_num_];
+    for(size_t i = 0; i < row_num_; ++i) {
+        this->matrix_[i] = new double[col_num_];
+        for(size_t j = 0; j < col_num_; ++j) {
+            this->matrix_[i][j] = copy[i][j];
+        }
+    }
+}
 
 Matrix& Matrix::operator=(const Matrix& a) {
-    if(this == &a) {
+    if(&a == this) {
         return *this;
     }
 
-    delete[] matrix_;
-    row_num_ = a.row_num_;
-    col_num_ = a.col_num_;
-    matrix_ = new double*[row_num_];
+    delete[] this->matrix_;
+    this->row_num_ = a.row_num_;
+    this->col_num_ = a.col_num_;
+    this->matrix_ = new double*[row_num_];
     for(size_t i = 0; i < row_num_; ++i) {
-        matrix_[i] = new double[col_num_];
+        this->matrix_[i] = new double[col_num_];
         for(size_t j = 0; j < col_num_; ++j) {
-            matrix_[i][j] = a.matrix_[i][j];
+            this->matrix_[i][j] = a[i][j];
         }
     }
     return *this;
@@ -64,7 +78,7 @@ void Matrix::set(size_t row, size_t col, const double& value) {
 
 void Matrix::resize(size_t new_rows, size_t new_cols) {
     double** newMatrix = new double*[new_rows];
-    for(size_t i = 0; i < new_cols; ++i) {
+    for(size_t i = 0; i < new_rows; ++i) {
         newMatrix[i] = new double[new_cols]{0};
     }
     for(size_t i = 0; i < std::min(new_rows, row_num_); ++i) {
@@ -203,8 +217,10 @@ double Matrix::det() const {
         return matrix_[0][0];
     }
 
-    double det = 0.0;
+    double det = 10000.0;
 
+
+    return det;
 }
 
 void Matrix::transpose() {
@@ -228,6 +244,9 @@ Matrix Matrix::transposed() const {
 }
 
 double Matrix::trace() const {
+    if(row_num_ != col_num_) {
+        throw SizeMismatchException();
+    }
     double tr = 0.0;
     for(size_t i = 0; i < std::min(row_num_, col_num_); ++i) {
         tr += matrix_[i][i];
@@ -241,8 +260,65 @@ std::vector<double> Matrix::getRow(size_t row) {
     }
     double* mRow = (*this)[row];
     std::vector<double> v;
-    for(size_t i = 0; i < row; ++i) {
+    for(size_t i = 0; i < col_num_; ++i) {
         v.push_back(mRow[i]);
     }
     return v;
+}
+
+std::vector<double> Matrix::getColumn(size_t column) {
+    if(column >= col_num_) {
+        throw OutOfBoundsException();
+    }
+    std::vector<double> v;
+    for(size_t i = 0; i < row_num_; ++i) {
+        v.push_back(matrix_[i][column]);
+    }
+    return v;
+}
+
+bool Matrix::operator==(const Matrix& a) const {
+    if(col_num_ != a.col_num_ || row_num_ != a.row_num_) {
+        return false;
+    }
+    for(size_t i = 0; i < row_num_; ++i) {
+        for(size_t j = 0; j < col_num_; ++j) {
+            if(fabs((*this)[i][j] - a[i][j]) > EPS) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool Matrix::operator!=(const Matrix& a) const {
+    return !((*this) == a);
+}
+
+Matrix task::operator*(const double& a, const Matrix& b) {
+    Matrix* newMatrix = new Matrix(b);
+    *newMatrix *= a;
+    return *newMatrix;
+}
+
+std::ostream& task::operator<<(std::ostream& output, const Matrix& matrix) {
+    for(size_t i = 0; i < matrix.getRowNum(); ++i) {
+        for(size_t j = 0; j < matrix.getColNum(); ++j) {
+            output << matrix[i][j] << " ";
+        }
+        output << std::endl;
+    }
+    return output;
+}
+
+std::istream& task::operator>>(std::istream& input, Matrix& matrix) {
+    size_t rowNum, colNum;
+    input >> rowNum >> colNum;
+    matrix.resize(rowNum, colNum);
+    for(size_t i = 0; i < rowNum; ++i) {
+        for(size_t j = 0; j < colNum; ++j) {
+            input >> matrix[i][j];
+        }
+    }
+    return input;
 }

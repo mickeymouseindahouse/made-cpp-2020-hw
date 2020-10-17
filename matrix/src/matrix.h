@@ -59,7 +59,13 @@ public:
     bool operator==(const Matrix& a) const;
     bool operator!=(const Matrix& a) const;
 
-    // Your code goes here...
+    size_t getRowNum() const {
+        return row_num_;
+    }
+
+    size_t getColNum() const {
+        return col_num_;
+    }
 
 };
 
