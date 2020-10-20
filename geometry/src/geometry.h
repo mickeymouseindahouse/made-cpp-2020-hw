@@ -3,8 +3,9 @@
 #include <cmath>
 #include <tuple>
 #include <utility>
+#include <vector>
 
-#define PI 3.14159265359
+#define PI 3.14159265
 
 auto square = [](const double &x) -> double {
     return x * x;
@@ -53,6 +54,14 @@ struct Point {
     }
 
     void reflex(const Line &line);
+
+    void scale(const Point &pivot, const double &coefficient) {
+        double shiftedX = x - pivot.x;
+        double shiftedY = y - pivot.y;
+
+        x = pivot.x + coefficient * shiftedX;
+        y = pivot.y + coefficient * shiftedY;
+    }
 
     void operator=(const Point &other) {
         x = other.x;
@@ -109,11 +118,13 @@ void Point::reflex(const Line &line) {
 
 class Shape {
 public:
-    virtual double perimeter() = 0;
+    virtual double perimeter() const = 0;
 
-    virtual double area() = 0;
+    virtual double area() const = 0;
 
-    virtual bool operator==(Shape &other) const = 0;
+    virtual bool operator==(const Shape &other) const = 0;
+
+    virtual bool operator!=(const Shape& other) const = 0;
 
     virtual void rotate(const Point &pivot, const double &angle) = 0;
 
@@ -127,6 +138,80 @@ public:
 };
 
 Shape::~Shape() = default;
+
+class Polygon : virtual public Shape {
+private:
+    std::vector<Point> *vertices;
+    size_t vNum;
+public:
+    explicit Polygon(const std::vector<Point> &vertices) {
+        this->vertices = new std::vector<Point>(vertices);
+        this->vNum = this->vertices->size();
+    }
+
+    size_t verticesCount() const {
+        return vNum;
+    }
+
+    std::vector<Point> getVertices() const {
+        return *vertices;
+    }
+
+    double perimeter() const override {
+        double sum = 0.0;
+        for (size_t i = 1; i < vNum; ++i) {
+            sum = (*vertices)[i].distance((*vertices)[i - 1]);
+        }
+        sum += (*vertices)[0].distance((*vertices)[vNum - 1]);
+        return sum;
+    }
+
+    double area() const  override {
+        double area = 0.0;
+        for (size_t i = 1; i < vNum; ++i) {
+            area += ((*vertices)[i].x + (*vertices)[i - 1].x) * ((*vertices)[i].y - (*vertices)[i - 1].y);
+        }
+        area += ((*vertices)[0].x + (*vertices)[vNum - 1].x) * ((*vertices)[0].y - (*vertices)[vNum - 1].y);
+        return fabs(area) / 2.0;
+    }
+
+    void rotate(const Point &pivot, const double &angle) override {
+        for (auto vertex : *vertices) {
+            vertex.rotate(pivot, angle);
+        }
+    }
+
+    void reflex(const Point &pivot) override {
+        for(auto vertex : *vertices) {
+            vertex.reflex(pivot);
+        }
+    }
+
+    void reflex(const Line& line) override {
+        for(auto vertex : *vertices) {
+            vertex.reflex(line);
+        }
+    }
+
+    void scale(const Point& pivot, const double& coefficient) override {
+        for(auto vertex : *vertices) {
+            vertex.scale(pivot, coefficient);
+        }
+    }
+
+    bool operator==(const Shape &other) const override {
+        auto p = dynamic_cast<const Polygon*>(& other);
+        return this->vNum == p->vNum && this->area() == p->area() && this->perimeter() == p->perimeter();
+    }
+
+    bool operator!=(const Shape& other) const override {
+        return !(*this == other);
+    }
+
+    ~Polygon() override {
+        delete vertices;
+    }
+};
 
 class Ellipse : virtual public Shape {
 private:
@@ -157,35 +242,47 @@ public:
         return c / a;
     }
 
-    double perimeter() {
-        return 4 * (PI * a * b + square(a - b)) / (a + b);
+    double perimeter() const override {
+        return 4 * a * std::comp_ellint_2(sqrt(square(a) - square(b)) / a);
     }
 
-    double area() {
+    double area() const override {
         return PI * a * b;
     }
 
-    void rotate(const Point &pivot, const double &angle) {
+    void rotate(const Point &pivot, const double &angle) override {
         focus1->rotate(pivot, angle);
         focus2->rotate(pivot, angle);
     }
 
-    void reflex(const Point &pivot) {
+    void reflex(const Point &pivot) override {
         focus1->reflex(pivot);
         focus2->reflex(pivot);
     }
 
-    void reflex(const Line &line) {
+    void reflex(const Line &line) override {
         focus1->reflex(line);
         focus2->reflex(line);
     }
 
-    bool operator==(Shape &other) const {
-        const Ellipse *e = dynamic_cast<const Ellipse *>(&other);
+    void scale(const Point &pivot, const double &coefficient) override {
+        focus1->scale(pivot, coefficient);
+        focus2->scale(pivot, coefficient);
+        a *= coefficient;
+        b *= coefficient;
+        c *= coefficient;
+    }
+
+    bool operator==(const Shape &other) const override {
+        auto e = dynamic_cast<const Ellipse *>(&other);
         return this->a == e->a && this->b == e->b && this->c == e->c;
     }
 
-    ~Ellipse() {
+    bool operator!=(const Shape& other) const override {
+        return !(*this == other);
+    }
+
+    ~Ellipse() override {
         delete focus1;
         delete focus2;
     }
@@ -193,12 +290,12 @@ public:
 
 class Circle : public Ellipse {
 private:
-    Point *center;
+    Point *center_;
     double radius_;
 
 public:
     Circle(const Point &p, double radius) : Ellipse(p, p, radius * 2.0) {
-        center = new Point(p);
+        center_ = new Point(p);
         radius_ = radius;
     }
 
@@ -206,30 +303,41 @@ public:
         return radius_;
     }
 
-    double perimeter() {
+    double perimeter() const override {
         return 2 * PI * radius_;
     }
 
-    double area() {
+    double area() const override {
         return PI * square(radius_);
     }
 
-    void rotate(const Point &pivot, const double &angle) {
-        center->rotate(pivot, angle);
+    void rotate(const Point &pivot, const double &angle) override {
+        center_->rotate(pivot, angle);
     }
 
-    void reflex(const Point &pivot) {
-        center->reflex(pivot);
+    void reflex(const Point &pivot) override {
+        center_->reflex(pivot);
     }
 
-    void reflex(const Line &line) {
-        center->reflex(line);
+    void reflex(const Line &line) override {
+        center_->reflex(line);
     }
 
-    bool operator==(Shape &other) const {
-        const Circle *c = dynamic_cast<const Circle *>(&other);
-        return center == c->center && radius_ == c->radius_;
+    void scale(const Point &pivot, const double &coefficient) override {
+        center_->scale(pivot, coefficient);
+        radius_ *= coefficient;
     }
 
+    bool operator==(const Shape &other) const override {
+        auto c = dynamic_cast<const Circle *>(&other);
+        return center_ == c->center_ && radius_ == c->radius_;
+    }
 
+    bool operator!=(const Shape& other) const override {
+        return !(*this == other);
+    }
+
+    ~Circle() override {
+        delete center_;
+    }
 };
