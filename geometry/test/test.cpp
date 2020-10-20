@@ -1,4 +1,4 @@
-#include "../src/geometry.h"
+#include "geometry.h"
 
 #include <cmath>
 #include <vector>
