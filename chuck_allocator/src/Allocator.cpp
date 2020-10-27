@@ -21,20 +21,17 @@ public:
   }
 
   ~Chunk<T>() {
-    if(chunkRefCnt > 1) {
+    if (chunkRefCnt > 1) {
       --chunkRefCnt;
     } else {
       delete[] p;
     }
-    if(prev) {
+    if (prev) {
       prev->~Chunk<T>();
     }
   }
 
-  void allocate(const size_t n) {
-    sizeLeft -= n;
-  }
-
+  void allocate(const size_t n) { sizeLeft -= n; }
 
   template <typename... Args> void construct(Args &&... args) {
     new (p) T(args...);
@@ -62,42 +59,41 @@ public:
   using size_type = std::size_t;
   using rebind = struct rebind { typedef Allocator<T> other; };
 
-  Allocator<T>() : chunk(nullptr) {};
+  Allocator<T>() : chunk(nullptr){};
   ~Allocator() {
-    if(chunk) {
+    if (chunk) {
       chunk->~Chunk<T>();
     }
   }
 
   T *allocate(const size_t &n) {
-    if(n > max_size()) {
+    if (n > max_size()) {
       throw std::runtime_error("Trying to allocate more than allowed!");
     }
 
     if (!chunk) {
       chunk = new Chunk<T>();
     }
-    if(n <= chunk->getSizeLeft()) {
+    if (n <= chunk->getSizeLeft()) {
       chunk->allocate(n);
       return reinterpret_cast<T *>(chunk->getPointer());
     } else {
-      //check all previous chunks for spare memory
+      // check all previous chunks for spare memory
       auto prev = chunk->getPrev();
-      while(prev != nullptr) {
-        if(n <= prev->getSizeLeft()) {
+      while (prev != nullptr) {
+        if (n <= prev->getSizeLeft()) {
           prev->allocate(n);
           return reinterpret_cast<T *>(prev->getPointer());
         }
         prev = prev->getPrev();
       }
-      //no luck, gotta create a new chunk
+      // no luck, gotta create a new chunk
       auto newChunk = new Chunk<T>();
       newChunk->setPrev(chunk);
       chunk = newChunk;
       chunk->allocate(n);
       return reinterpret_cast<T *>(chunk->getPointer());
     }
-
   }
 
   void deallocate(T *p, const size_t n) {
@@ -113,8 +109,7 @@ public:
   std::size_t max_size() { return MULT * sizeof(T); }
 };
 
-
-//int main() {
+// int main() {
 // std::vector<int, Allocator<int>> vec;
 // for(int i = 0; i < MULT; ++i) {
 //   vec.push_back(1);
